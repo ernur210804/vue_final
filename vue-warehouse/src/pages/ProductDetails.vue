@@ -1,21 +1,29 @@
-<template>
-  <div v-if="product">
-    <h2>{{ product.title }}</h2>
-    <p>Price: {{ product.price }}</p>
-  </div>
+<script setup>
+import { onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import { useProductStore } from '../stores/product/productStore.js';
+import Loader from '../components/ui/Loader.vue';
 
-  <p v-else>Product not found</p>
+const route = useRoute();
+const store = useProductStore();
+
+onMounted(() => {
+  store.fetchProductById(route.params.id);
+});
+</script>
+
+<template>
+  <div>
+    <Loader v-if="store.loading" />
+    <div v-else-if="store.error">{{ store.error }}</div>
+    <div v-else>
+      <h1>{{ store.getSelected?.name }}</h1>
+      <p>{{ store.getSelected?.details }}</p>
+    </div>
+  </div>
 </template>
 
-<script setup>
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { useWarehouseStore } from '../store/warehouseStore'
-
-const route = useRoute()
-const store = useWarehouseStore()
-
-const product = computed(() =>
-  store.products.find(p => p.id == route.params.id)
-)
-</script>
+<style scoped>
+div { padding: 20px; }
+@media (max-width: 768px) { div { padding: 10px; } }
+</style>

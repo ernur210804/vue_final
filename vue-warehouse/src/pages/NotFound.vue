@@ -1,10 +1,10 @@
+<script setup>
+</script>
+
 <template>
-  <h1>404 - Page Not Found</h1>
+  <div>404 - Page Not Found</div>
 </template>
 
 <style scoped>
-h1 {
-  text-align: center;
-  margin-top: 50px;
-}
+div { padding: 20px; text-align: center; font-size: 24px; }
 </style>
