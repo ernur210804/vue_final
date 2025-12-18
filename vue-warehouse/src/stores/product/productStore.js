@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import axios from 'axios';
+import axios from '../../api/http.js';
 
 export const useProductStore = defineStore('product', {
   state: () => ({
@@ -17,8 +17,8 @@ export const useProductStore = defineStore('product', {
       this.loading = true;
       this.error = null;
       try {
-        const response = await axios.get('https://jsonplaceholder.typicode.com/posts');
-        this.products = response.data.slice(0, 5).map((item, index) => ({ id: index + 1, name: `Product ${index + 1}`, description: item.title })); // Mock
+        const response = await axios.get('/products');
+        this.products = response.data;
       } catch (err) {
         this.error = 'Failed to fetch products';
       } finally {
@@ -29,8 +29,8 @@ export const useProductStore = defineStore('product', {
       this.loading = true;
       this.error = null;
       try {
-        const response = await axios.get(`https://jsonplaceholder.typicode.com/posts/${id}`);
-        this.selectedProduct = { id, name: 'Product Details', details: response.data.body }; // Mock
+        await this.fetchProducts();
+        this.selectedProduct = this.products.find(p => p.id === parseInt(id));
       } catch (err) {
         this.error = 'Failed to fetch product';
       } finally {

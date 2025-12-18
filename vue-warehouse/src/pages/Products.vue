@@ -16,7 +16,7 @@ onMounted(() => {
     <div v-else-if="store.error">{{ store.error }}</div>
     <ul v-else>
       <li v-for="product in store.getProducts" :key="product.id" @click="$router.push(`/products/${product.id}`)">
-        {{ product.name }}
+        {{ product.name }} ({{ product.unit }})
       </li>
     </ul>
   </div>
