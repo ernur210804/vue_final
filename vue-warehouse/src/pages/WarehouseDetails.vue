@@ -1,100 +1,108 @@
 <script setup>
-import { onMounted, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
-import { useWarehouseStore } from '../stores/warehouse/warehouseStore.js';
-import { useProductStore } from '../stores/product/productStore.js';
-import Loader from '../components/ui/Loader.vue';
-import IncomingForm from '../components/warehouse/IncomingForm.vue';
-import OutgoingForm from '../components/warehouse/OutgoingForm.vue';
+import { onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import { useMovementStore } from '../stores/movement/movementStore'
+import { useProductStore } from '../stores/product/productStore'
 
-const route = useRoute();
-const warehouseStore = useWarehouseStore();
-const productStore = useProductStore();
+const route = useRoute()
+const warehouseId = Number(route.params.id)
 
-const warehouseId = ref(route.params.id);
+const movementStore = useMovementStore()
+const productStore = useProductStore()
 
-// Fetch data
+const form = ref({
+  product_id: null,
+  quantity: 0,
+  price: 0
+})
+
 onMounted(async () => {
-  await warehouseStore.fetchWarehouseById(warehouseId.value);
-  await warehouseStore.fetchBalances(warehouseId.value);
-  await warehouseStore.fetchHistory(warehouseId.value);
-  await productStore.fetchProducts();
-});
+  await productStore.fetchProducts()
+  await movementStore.fetchBalances(warehouseId)
+  await movementStore.fetchHistory(warehouseId)
+})
 
-// Refetch balances and history after operations
-const refetchData = () => {
-  warehouseStore.fetchBalances(warehouseId.value);
-  warehouseStore.fetchHistory(warehouseId.value);
-};
+async function incoming() {
+  await movementStore.createIncoming({
+    ...form.value,
+    warehouse_id: warehouseId,
+    status: 'draft',
+    date: new Date().toISOString()
+  })
+  await movementStore.fetchHistory(warehouseId)
+}
 
-// Watch for route change if id changes
-watch(() => route.params.id, (newId) => {
-  warehouseId.value = newId;
-  refetchData();
-});
+async function outgoing() {
+  await movementStore.createOutgoing({
+    ...form.value,
+    warehouse_id: warehouseId,
+    status: 'draft',
+    date: new Date().toISOString()
+  })
+  await movementStore.fetchHistory(warehouseId)
+}
+
+async function post(id) {
+  await movementStore.postMovement(id)
+  await movementStore.fetchBalances(warehouseId)
+  await movementStore.fetchHistory(warehouseId)
+}
 </script>
 
 <template>
-  <div>
-    <Loader v-if="warehouseStore.loading" />
-    <div v-else-if="warehouseStore.error">{{ warehouseStore.error }}</div>
-    <div v-else>
-      <h1>{{ warehouseStore.getSelected?.name }}</h1>
-      
-      <!-- Balance Table -->
-      <h2>Остатки и движение товаров</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Товар</th>
-            <th>Наименование склада</th>
-            <th>Единица измерения</th>
-            <th>Остаток на начало</th>
-            <th>Приход (количество)</th>
-            <th>Расход (количество)</th>
-            <th>Остаток на конец</th>
-            <th>Дата изменения</th>
-            <th>Сумма прихода</th>
-            <th>Сумма расхода</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="balance in warehouseStore.getBalances" :key="balance.product_id">
-            <td>{{ balance.product_name }}</td>
-            <td>{{ warehouseStore.getSelected?.name }}</td>
-            <td>{{ balance.unit }}</td>
-            <td>{{ balance.beginning_balance }}</td>
-            <td>{{ balance.incoming_qty }}</td>
-            <td>{{ balance.outgoing_qty }}</td>
-            <td>{{ balance.ending_balance }}</td>
-            <td>{{ balance.last_change_date }}</td>
-            <td>{{ balance.incoming_amount }}</td>
-            <td>{{ balance.outgoing_amount }}</td>
-          </tr>
-        </tbody>
-      </table>
-      
-      <!-- Forms -->
-      <h2>Приход товаров</h2>
-      <IncomingForm :warehouseId="warehouseId" @success="refetchData" />
-      
-      <h2>Расход товаров</h2>
-      <OutgoingForm :warehouseId="warehouseId" @success="refetchData" />
-      
-      <!-- History -->
-      <h2>История движений</h2>
-      <ul>
-        <li v-for="movement in warehouseStore.getHistory" :key="movement.id">
-          {{ movement.type }}: {{ movement.quantity }} ({{ movement.status }}) at {{ movement.date }}
-        </li>
-      </ul>
-    </div>
-  </div>
-</template>
+  <h2>Warehouse #{{ warehouseId }}</h2>
 
-<style scoped>
-div { padding: 20px; }
-table { width: 100%; border-collapse: collapse; }
-th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-@media (max-width: 768px) { div { padding: 10px; } table { font-size: 12px; } }
-</style>
+  <!-- BALANCES -->
+  <h3>Balances</h3>
+  <table>
+    <tr>
+      <th>Product</th>
+      <th>Quantity</th>
+    </tr>
+    <tr v-for="b in movementStore.balances" :key="b.product_id">
+      <td>{{ b.product_name }}</td>
+      <td>{{ b.quantity }}</td>
+    </tr>
+  </table>
+
+  <!-- FORM -->
+  <h3>New Movement</h3>
+  <select v-model="form.product_id">
+    <option disabled value="">Select product</option>
+    <option v-for="p in productStore.products" :key="p.id" :value="p.id">
+      {{ p.name }}
+    </option>
+  </select>
+
+  <input type="number" v-model="form.quantity" placeholder="Quantity" />
+  <input type="number" v-model="form.price" placeholder="Price" />
+
+  <button @click="incoming">Incoming</button>
+  <button @click="outgoing">Outgoing</button>
+
+  <!-- HISTORY -->
+  <h3>History</h3>
+  <table>
+    <tr>
+      <th>ID</th>
+      <th>Type</th>
+      <th>Product</th>
+      <th>Qty</th>
+      <th>Status</th>
+      <th></th>
+    </tr>
+
+    <tr v-for="m in movementStore.history" :key="m.id">
+      <td>{{ m.id }}</td>
+      <td>{{ m.type }}</td>
+      <td>{{ m.product_id }}</td>
+      <td>{{ m.quantity }}</td>
+      <td>{{ m.status }}</td>
+      <td>
+        <button v-if="m.status === 'draft'" @click="post(m.id)">
+          Post
+        </button>
+      </td>
+    </tr>
+  </table>
+</template>

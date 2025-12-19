@@ -1,41 +1,58 @@
-import { defineStore } from 'pinia';
-import axios from 'axios';
+import { defineStore } from 'pinia'
+import http from '../../api/http'
 
 export const useWarehouseStore = defineStore('warehouse', {
   state: () => ({
     warehouses: [],
-    selectedWarehouse: null,
+    history: [],
     loading: false,
     error: null
   }),
+
   getters: {
     getWarehouses: (state) => state.warehouses,
-    getSelected: (state) => state.selectedWarehouse
+    getHistory: (state) => state.history
   },
+
   actions: {
     async fetchWarehouses() {
-      this.loading = true;
-      this.error = null;
+      this.loading = true
+      this.error = null
+
       try {
-        const response = await axios.get('https://jsonplaceholder.typicode.com/posts');
-        this.warehouses = response.data.slice(0, 5).map((item, index) => ({ id: index + 1, name: `Warehouse ${index + 1}`, location: item.title })); // Mock data
+        const res = await http.get('/warehouses/')
+        this.warehouses = res.data
       } catch (err) {
-        this.error = 'Failed to fetch warehouses';
+        this.error = err
+        console.error('fetchWarehouses error:', err)
       } finally {
-        this.loading = false;
+        this.loading = false
       }
     },
-    async fetchWarehouseById(id) {
-      this.loading = true;
-      this.error = null;
+
+    async createWarehouse(name) {
       try {
-        const response = await axios.get(`https://jsonplaceholder.typicode.com/posts/${id}`);
-        this.selectedWarehouse = { id, name: 'Warehouse Details', details: response.data.body }; // Mock
+        const res = await http.post('/warehouses/', { name })
+        this.warehouses.push(res.data)
       } catch (err) {
-        this.error = 'Failed to fetch warehouse';
+        console.error('createWarehouse error:', err)
+        throw err
+      }
+    },
+
+    async fetchHistory(warehouseId) {
+      this.loading = true
+      this.error = null
+
+      try {
+        const res = await http.get(`/movements/history/${warehouseId}`)
+        this.history = res.data
+      } catch (err) {
+        this.error = err
+        console.error('fetchHistory error:', err)
       } finally {
-        this.loading = false;
+        this.loading = false
       }
     }
   }
-});
+})

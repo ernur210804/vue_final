@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useWarehouseStore } from '../stores/warehouse/warehouseStore.js';
 import Loader from '../components/ui/Loader.vue';
 

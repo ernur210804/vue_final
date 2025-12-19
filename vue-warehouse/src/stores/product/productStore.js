@@ -1,41 +1,29 @@
-import { defineStore } from 'pinia';
-import axios from '../../api/http.js';
+import { defineStore } from 'pinia'
+import http from '../../api/http'
 
 export const useProductStore = defineStore('product', {
   state: () => ({
     products: [],
-    selectedProduct: null,
     loading: false,
     error: null
   }),
-  getters: {
-    getProducts: (state) => state.products,
-    getSelected: (state) => state.selectedProduct
-  },
+
   actions: {
     async fetchProducts() {
-      this.loading = true;
-      this.error = null;
+      this.loading = true
       try {
-        const response = await axios.get('/products');
-        this.products = response.data;
-      } catch (err) {
-        this.error = 'Failed to fetch products';
+        const res = await http.get('/products/')
+        this.products = res.data
+      } catch (e) {
+        this.error = e.response?.data || e.message
       } finally {
-        this.loading = false;
+        this.loading = false
       }
     },
-    async fetchProductById(id) {
-      this.loading = true;
-      this.error = null;
-      try {
-        await this.fetchProducts();
-        this.selectedProduct = this.products.find(p => p.id === parseInt(id));
-      } catch (err) {
-        this.error = 'Failed to fetch product';
-      } finally {
-        this.loading = false;
-      }
+
+    async createProduct(payload) {
+      const res = await http.post('/products/', payload)
+      this.products.push(res.data)
     }
   }
-});
+})

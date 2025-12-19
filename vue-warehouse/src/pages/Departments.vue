@@ -1,55 +1,50 @@
 <script setup>
-import { onMounted, ref } from 'vue';
-import { useProductStore } from '../stores/product/productStore';
+import { ref } from 'vue';
 import { Plus, Edit2, Trash2 } from 'lucide-vue-next';
 
-const store = useProductStore();
-const showModal = ref(false);
-const editingProduct = ref(null);
-const formData = ref({
-  name: '',
-  unit: 'кг'
-});
+const departments = ref([
+  { id: 1, name: 'Производство', manager: 'Иванов И.И.', employees: 15 },
+  { id: 2, name: 'Склад', manager: 'Петров П.П.', employees: 8 },
+  { id: 3, name: 'Логистика', manager: 'Сидоров С.С.', employees: 5 },
+]);
 
-onMounted(() => {
-  store.fetchProducts();
-});
+const showModal = ref(false);
+const editingDept = ref(null);
+const formData = ref({ name: '', manager: '', employees: 0 });
 
 const openAddModal = () => {
-  editingProduct.value = null;
-  formData.value = { name: '', unit: 'кг' };
+  editingDept.value = null;
+  formData.value = { name: '', manager: '', employees: 0 };
   showModal.value = true;
 };
 
-const openEditModal = (product) => {
-  editingProduct.value = product;
-  formData.value = { ...product };
+const openEditModal = (dept) => {
+  editingDept.value = dept;
+  formData.value = { ...dept };
   showModal.value = true;
 };
 
 const closeModal = () => {
   showModal.value = false;
-  editingProduct.value = null;
-  formData.value = { name: '', unit: 'кг' };
+  editingDept.value = null;
 };
 
-const saveProduct = async () => {
-  if (editingProduct.value) {
-    // Update existing product
-    const index = store.products.findIndex(p => p.id === editingProduct.value.id);
-    if (index !== -1) {
-      store.products[index] = { ...editingProduct.value, ...formData.value };
-    }
+const saveDepartment = () => {
+  if (editingDept.value) {
+    const index = departments.value.findIndex(d => d.id === editingDept.value.id);
+    departments.value[index] = { ...editingDept.value, ...formData.value };
   } else {
-    // Create new product
-    await store.createProduct(formData.value);
+    departments.value.push({
+      id: Date.now(),
+      ...formData.value
+    });
   }
   closeModal();
 };
 
-const deleteProduct = (id) => {
-  if (confirm('Удалить этот товар?')) {
-    store.products = store.products.filter(p => p.id !== id);
+const deleteDepartment = (id) => {
+  if (confirm('Удалить отдел?')) {
+    departments.value = departments.value.filter(d => d.id !== id);
   }
 };
 </script>
@@ -57,10 +52,10 @@ const deleteProduct = (id) => {
 <template>
   <div :class="$style.container">
     <div :class="$style.header">
-      <h1 :class="$style.title">Товары</h1>
+      <h1 :class="$style.title">Отделы</h1>
       <button :class="$style.addButton" @click="openAddModal">
         <Plus :size="16" />
-        Добавить товар
+        Добавить отдел
       </button>
     </div>
 
@@ -68,70 +63,54 @@ const deleteProduct = (id) => {
       <table :class="$style.table">
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Наименование</th>
-            <th>Единица измерения</th>
+            <th>Название</th>
+            <th>Руководитель</th>
+            <th>Сотрудников</th>
             <th>Действия</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="product in store.products" :key="product.id">
-            <td>{{ product.id }}</td>
-            <td>{{ product.name }}</td>
-            <td>{{ product.unit }}</td>
+          <tr v-for="dept in departments" :key="dept.id">
+            <td>{{ dept.name }}</td>
+            <td>{{ dept.manager }}</td>
+            <td>{{ dept.employees }}</td>
             <td>
               <div :class="$style.actions">
-                <button :class="$style.actionBtn" @click="openEditModal(product)">
+                <button :class="$style.actionBtn" @click="openEditModal(dept)">
                   <Edit2 :size="16" />
                 </button>
-                <button :class="$style.actionBtn" @click="deleteProduct(product.id)">
+                <button :class="$style.actionBtn" @click="deleteDepartment(dept.id)">
                   <Trash2 :size="16" />
                 </button>
               </div>
             </td>
           </tr>
-          <tr v-if="store.products.length === 0">
-            <td colspan="4" :class="$style.emptyState">Нет товаров</td>
-          </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- Add/Edit Modal -->
     <div v-if="showModal" :class="$style.modalOverlay" @click="closeModal">
       <div :class="$style.modal" @click.stop>
         <h2 :class="$style.modalTitle">
-          {{ editingProduct ? 'Редактировать товар' : 'Добавить товар' }}
+          {{ editingDept ? 'Редактировать отдел' : 'Добавить отдел' }}
         </h2>
-        
-        <form @submit.prevent="saveProduct" :class="$style.form">
+        <form @submit.prevent="saveDepartment" :class="$style.form">
           <div :class="$style.formGroup">
-            <label :class="$style.label">Наименование</label>
-            <input 
-              v-model="formData.name"
-              :class="$style.formInput"
-              required
-              placeholder="Введите название товара"
-            />
+            <label>Название</label>
+            <input v-model="formData.name" :class="$style.formInput" required />
           </div>
-
           <div :class="$style.formGroup">
-            <label :class="$style.label">Единица измерения</label>
-            <select v-model="formData.unit" :class="$style.formInput">
-              <option value="кг">кг</option>
-              <option value="г">г</option>
-              <option value="шт">шт</option>
-              <option value="м">м</option>
-              <option value="л">л</option>
-            </select>
+            <label>Руководитель</label>
+            <input v-model="formData.manager" :class="$style.formInput" required />
           </div>
-
+          <div :class="$style.formGroup">
+            <label>Количество сотрудников</label>
+            <input type="number" v-model="formData.employees" :class="$style.formInput" required />
+          </div>
           <div :class="$style.modalActions">
-            <button type="button" :class="$style.cancelButton" @click="closeModal">
-              Отмена
-            </button>
+            <button type="button" :class="$style.cancelButton" @click="closeModal">Отмена</button>
             <button type="submit" :class="$style.saveButton">
-              {{ editingProduct ? 'Сохранить' : 'Добавить' }}
+              {{ editingDept ? 'Сохранить' : 'Добавить' }}
             </button>
           </div>
         </form>
@@ -237,12 +216,6 @@ const deleteProduct = (id) => {
   background: var(--color-hover-bg);
   border-color: var(--color-primary);
   color: var(--color-primary);
-}
-
-.emptyState {
-  text-align: center;
-  color: var(--color-text-light);
-  padding: var(--spacing-xxl) !important;
 }
 
 .modalOverlay {
